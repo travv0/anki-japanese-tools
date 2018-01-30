@@ -84,6 +84,9 @@ for row in c.fetchall():
 print("Finished adding cards, saving collection...")
 col.save()
 
+if os.path.isfile(dbPath + '.bak'):
+    os.remove(dbPath + '.bak')
+
 print("Backing up Kindle vocabulary database...")
 copyfile(dbPath, dbPath + '.bak')
 
@@ -94,7 +97,7 @@ if os.path.isfile(dbPath + '.bak'):
     c.execute('delete from lookups;')
 
     conn.commit()
-    print("Complete.  Please restart your Kindle if you can still see flashcards on it.")
+    print("Complete.  Please restart your Kindle.")
 
 else:
 
