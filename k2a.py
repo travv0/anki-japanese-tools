@@ -1,18 +1,25 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import sqlite3, sys, os, requests, configparser
+import sqlite3, sys, os, requests, configparser, codecs
 from shutil import copyfile
 
 configPath =  sys.argv[1] if len(sys.argv) > 1 else 'config.ini'
 
 config = configparser.ConfigParser()
 
-if not config.read(configPath):
+try:
+    config.readfp(codecs.open(configPath, "r", "utf8"))
+except FileNotFoundError as e:
+    print('''Error loading config file "%s".  You can specify the path as the first command line argument.
+Error: %s''' % (configPath, e))
+    exit()
+
+if not config.sections():
     print('Error loading config file "%s".  You can specify the path as the first command line argument.' % configPath)
     exit()
 
-dbPath = config['SETTINGS']['dbPath']
+dbPath = os.path.expanduser(config['SETTINGS']['dbPath'])
 profilePath = config['SETTINGS']['profilePath']
 collectionFileName = config['SETTINGS']['collectionFileName']
 cardTypeName = config['SETTINGS']['cardTypeName']
@@ -50,7 +57,13 @@ deck = col.decks.byName(deckName)
 
 # set up sqlite
 os.chdir(wd)
-conn = sqlite3.connect(dbPath)
+
+try:
+    conn = sqlite3.connect(os.path.expanduser(dbPath))
+except sqlite3.OperationalError as e:
+    print("Unable to connect to Kindle database.  Please ensure your Kindle is plugged in and in USB mode.\nError: %s" % e)
+    exit()
+
 conn.row_factory = sqlite3.Row
 
 c = conn.cursor()
