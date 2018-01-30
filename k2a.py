@@ -64,6 +64,11 @@ except sqlite3.OperationalError as e:
     print("Unable to connect to Kindle database.  Please ensure your Kindle is plugged in and in USB mode.\nError: %s" % e)
     exit()
 
+for noteid in col.findNotes('tag:k2a tag:lastimport'):
+    note = col.getNote(noteid)
+    note.delTag('lastimport')
+    note.flush()
+
 conn.row_factory = sqlite3.Row
 
 c = conn.cursor()
@@ -109,7 +114,7 @@ for row in c.fetchall():
                 note.fields[int(config['NOTE_FIELD_INDICES']['english'])] = english
                 note.fields[int(config['NOTE_FIELD_INDICES']['sentence'])] = sentence
 
-                tags = 'k2a'
+                tags = 'k2a lastimport'
                 note.tags = col.tags.canonify(col.tags.split(tags))
                 m = note.model()
                 m['tags'] = note.tags
@@ -135,7 +140,7 @@ if os.path.isfile(dbPath + '.bak'):
     c.execute('delete from lookups;')
 
     conn.commit()
-    print("Complete.  Please restart your Kindle.")
+    print("Complete.  Please restart your Kindle to ensure database doesn't become corrupt.")
 
 else:
 
