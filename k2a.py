@@ -38,7 +38,9 @@ for row in c.fetchall():
 
     expression = row['word']
 
-    if row['lang'] == 'ja' and not col.findNotes('"expression:%s"' % row['word']):
+    found = False
+
+    if row['lang'] == 'ja' and not col.findNotes('"expression:%s"' % expression):
 
         r = requests.get("http://jisho.org/api/v1/search/words?",
                          params = {'keyword': '"' + expression + '"'})
@@ -47,29 +49,37 @@ for row in c.fetchall():
         if json['data']:
 
             entry = json['data'][0]
-            note = col.newNote()
-            note.model()['did'] = deck['id']
 
-            english = '<br/>'.join(list(map((lambda x: '; '.join(x['english_definitions'])),
-                                            entry['senses'])))
-            reading = entry['japanese'][0]['reading']
-            sentence = row['usage']
+            for e in entry['japanese']:
+                for k in e.values():
+                    if k == expression:
+                        found = True
 
-            note.fields[0] = expression
-            note.fields[3] = reading
-            note.fields[4] = english
-            note.fields[7] = reading
-            note.fields[8] = sentence
+            if found:
 
-            tags = 'k2a'
-            note.tags = col.tags.canonify(col.tags.split(tags))
-            m = note.model()
-            m['tags'] = note.tags
-            col.models.save(m)
+                note = col.newNote()
+                note.model()['did'] = deck['id']
 
-            col.addNote(note)
+                english = '<br/>'.join(list(map((lambda x: '; '.join(x['english_definitions'])),
+                                                entry['senses'])))
+                reading = entry['japanese'][0]['reading']
+                sentence = row['usage']
 
-            print("Added %s (%s) to Anki." % (expression, reading))
+                note.fields[0] = expression
+                note.fields[3] = reading
+                note.fields[4] = english
+                note.fields[7] = reading
+                note.fields[8] = sentence
+
+                tags = 'k2a'
+                note.tags = col.tags.canonify(col.tags.split(tags))
+                m = note.model()
+                m['tags'] = note.tags
+                col.models.save(m)
+
+                col.addNote(note)
+
+                print("Added %s (%s) to Anki." % (expression, reading))
 
 print("Finished adding cards, saving collection...")
 col.save()
@@ -90,3 +100,5 @@ else:
 
     print("Unable to backup database, skipping Kindle flashcard deletion.")
     print("Complete.")
+
+input("Press Enter to exit...")
