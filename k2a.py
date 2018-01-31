@@ -85,6 +85,7 @@ for row in c.fetchall():
     expression = row['word']
 
     found = False
+    kanaOnly = False
 
     if row['lang'] == 'ja' and not col.findNotes('"%s:%s"' % (expressionFieldName, expression)):
 
@@ -103,6 +104,10 @@ for row in c.fetchall():
 
                         if k == 'reading':
                             kanaOnly = True
+
+                        break
+                if found:
+                    break
 
             if found:
 
