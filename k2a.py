@@ -3,6 +3,7 @@
 
 import sqlite3, sys, os, requests, configparser, codecs
 from shutil import copyfile
+from mutagen.mp3 import MP3
 
 configPath =  sys.argv[1] if len(sys.argv) > 1 else 'config.ini'
 
@@ -21,7 +22,7 @@ if not config.sections():
 
 dbPath = os.path.expanduser(config['SETTINGS']['dbPath'])
 profilePath = config['SETTINGS']['profilePath']
-collectionFileName = config['SETTINGS']['collectionFileName']
+collectionName = config['SETTINGS']['collectionName']
 cardTypeName = config['SETTINGS']['cardTypeName']
 deckName = config['SETTINGS']['deckName']
 expressionFieldName = config['SETTINGS']['expressionFieldName']
@@ -42,7 +43,7 @@ from anki.storage import Collection
 wd = os.getcwd()
 
 PROFILE_HOME = os.path.expanduser(profilePath)
-cpath = os.path.join(PROFILE_HOME, collectionFileName)
+cpath = os.path.join(PROFILE_HOME, collectionName + ".anki2")
 
 try:
     col = Collection(cpath, log=True)
@@ -95,9 +96,12 @@ for row in c.fetchall():
             entry = json['data'][0]
 
             for e in entry['japanese']:
-                for k in e.values():
-                    if k == expression:
+                for k, v in e.items():
+                    if v == expression:
                         found = True
+
+                        if k == 'reading':
+                            kanaOnly = True
 
             if found:
 
@@ -106,13 +110,30 @@ for row in c.fetchall():
 
                 english = '<br/>'.join(list(map((lambda x: '; '.join(x['english_definitions'])),
                                                 entry['senses'])))
-                reading = entry['japanese'][0]['reading']
+                if kanaOnly:
+                    reading = ''
+                else:
+                    reading = entry['japanese'][0]['reading']
+
                 sentence = row['usage']
+
+                audio = requests.get("https://assets.languagepod101.com/dictionary/japanese/audiomp3.php?",
+                                     params = {'kanji': expression,
+                                               'kana': reading if reading else expression})
+
+                audioFileName = 'k2a_%s_%s.mp3' % (expression, reading if reading else expression)
+                audioFilePath = '%s/%s.media/%s' % (PROFILE_HOME, collectionName, audioFileName)
+                with open(audioFilePath, 'wb') as f:
+                    f.write(audio.content)
+
+                mp3 = MP3(audioFilePath)
 
                 note.fields[int(config['NOTE_FIELD_INDICES']['expression'])] = expression
                 note.fields[int(config['NOTE_FIELD_INDICES']['reading'])] = reading
                 note.fields[int(config['NOTE_FIELD_INDICES']['english'])] = english
                 note.fields[int(config['NOTE_FIELD_INDICES']['sentence'])] = sentence
+                if mp3.info.length < 5:
+                    note.fields[int(config['NOTE_FIELD_INDICES']['audio'])] = '[sound:' + audioFileName + ']'
 
                 tags = 'k2a lastimport'
                 note.tags = col.tags.canonify(col.tags.split(tags))
@@ -122,7 +143,10 @@ for row in c.fetchall():
 
                 col.addNote(note)
 
-                print("Added %s (%s) to Anki." % (expression, reading))
+                print("Added %s " % expression, end='')
+                if reading:
+                    print("(%s) " % reading, end='')
+                print("to Anki.")
 
 print("Finished adding cards, saving collection...")
 col.save()
