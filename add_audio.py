@@ -60,7 +60,7 @@ deck = col.decks.byName(deckName)
 
 i = 0
 
-notes = col.findNotes('"deck:%s" %s:' % (deckName, audioFieldName))
+notes = col.findNotes('"deck:%s" -tag:noaudio %s:' % (deckName, audioFieldName))
 notecnt = len(notes)
 
 print("Attempting to add audio for %d cards..." % notecnt)
@@ -92,6 +92,7 @@ for noteid in notes:
         print('%d/%d\tAdding audio "%s" for %s' % (i, notecnt, audioFileName, expression))
     else:
         print('%d/%d\tAudio not found for %s, skipping...' % (i, notecnt, expression))
+        note.addTag('noaudio')
         os.remove(audioFilePath)
 
     note.flush()
@@ -103,9 +104,10 @@ for noteid in notes:
 print("Finished adding audio, saving collection...")
 col.close(save=True)
 
-print("The following errors occurred:")
+if errors:
+    print("The following errors occurred:")
 
-for error in errors:
-    print("%s - %s" % (error[0], error[1]))
+    for error in errors:
+        print("%s - %s" % (error[0], error[1]))
 
 input("Press Enter to exit...")
