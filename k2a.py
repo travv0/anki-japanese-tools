@@ -153,7 +153,8 @@ for row in c.fetchall():
                 print("Added %s " % expression, end='')
                 if reading:
                     print("(%s) " % reading, end='')
-                print("to Anki.")
+                print("to Anki: %s" %
+                      ((english[:50] + '..;') if len(english) > 53 else english).replace('<br/>', '; '))
 
 print("Finished adding cards, saving collection...")
 col.close(save=True)
