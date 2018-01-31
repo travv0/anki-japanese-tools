@@ -32,6 +32,7 @@ try:
     readingIndex = int(config['NOTE_FIELD_INDICES']['reading'])
     englishIndex = int(config['NOTE_FIELD_INDICES']['english'])
     sentenceIndex = int(config['NOTE_FIELD_INDICES']['sentence'])
+    audioIndex = int(config['NOTE_FIELD_INDICES']['audio'])
 except ValueError as e:
     print("Note field indices must be integers.\nError: %s" % e)
     exit()
@@ -128,12 +129,14 @@ for row in c.fetchall():
 
                 mp3 = MP3(audioFilePath)
 
-                note.fields[int(config['NOTE_FIELD_INDICES']['expression'])] = expression
-                note.fields[int(config['NOTE_FIELD_INDICES']['reading'])] = reading
-                note.fields[int(config['NOTE_FIELD_INDICES']['english'])] = english
-                note.fields[int(config['NOTE_FIELD_INDICES']['sentence'])] = sentence
+                note.fields[expressionIndex] = expression
+                note.fields[readingIndex] = reading
+                note.fields[englishIndex] = english
+                note.fields[sentenceIndex] = sentence
                 if mp3.info.length < 5:
-                    note.fields[int(config['NOTE_FIELD_INDICES']['audio'])] = '[sound:' + audioFileName + ']'
+                    note.fields[audioIndex] = '[sound:' + audioFileName + ']'
+                else:
+                    os.remove(audioFilePath)
 
                 tags = 'k2a lastimport'
                 note.tags = col.tags.canonify(col.tags.split(tags))
@@ -149,7 +152,7 @@ for row in c.fetchall():
                 print("to Anki.")
 
 print("Finished adding cards, saving collection...")
-col.save()
+col.close(save=True)
 
 if os.path.isfile(dbPath + '.bak'):
     os.remove(dbPath + '.bak')
@@ -170,5 +173,7 @@ else:
 
     print("Unable to backup database, skipping Kindle flashcard deletion.")
     print("Complete.")
+
+conn.close()
 
 input("Press Enter to exit...")
