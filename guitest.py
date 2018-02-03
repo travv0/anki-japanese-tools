@@ -3,6 +3,7 @@ import codecs, sys, os, configparser, sqlite3, requests
 from appJar import gui
 from jishoword import JishoWord
 from mutagen.mp3 import MP3
+from lxml import html
 
 configPath =  sys.argv[1] if len(sys.argv) > 1 else 'config.ini'
 
@@ -61,6 +62,7 @@ def getWordsFromFile(file):
         words[lines[i][0]] = lines[i][1:]
     return words
 
+words = getWordsFromFile(wordsFile)
 
 def vocabPane(words):
     linenum = 0
@@ -151,7 +153,7 @@ def submit(btn):
                 print("to Anki: %s" %
                       ((english[:50] + '..;') if len(english) > 53 else english).replace('<br/>', '; '))
 
-                i += 1
+            i += 1
         col.close(save=True)
 
         file = codecs.open(wordsFile, 'w', 'utf8')
@@ -169,7 +171,7 @@ def runScript(file):
 
 def quickAdd(btn):
     file = codecs.open(wordsFile, 'a', 'utf8')
-    file.write(app.getEntry("quickAddEntry") + '\n')
+    file.write(app.getEntry("quickAddEntry").replace(' ', '\n').replace('　', '\n') + '\n')
     file.close()
 
     resetApp()
@@ -189,6 +191,8 @@ def drawApp(app):
     app.addButton("Quick Add", quickAdd, 1, 2)
 
     app.setEntrySubmitFunction("quickAddEntry", quickAdd)
+
+    app.bindKey('<Escape>', app.stop)
 
     app.addButton("Import into Anki and clear list", submit, 2, 1)
 
