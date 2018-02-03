@@ -26,7 +26,7 @@ join lookups on words.id = lookups.word_key;
 shared.resetLastImportTag()
 
 for row in c.fetchall():
-    shared.addToAnki(col, deck, row['word'], row['usage'])
+    shared.addToAnki(row['word'], row['usage'])
 
 shared.saveAndCloseAnki()
 
