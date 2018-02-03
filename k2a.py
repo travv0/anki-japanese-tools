@@ -51,5 +51,3 @@ else:
     print("Complete.")
 
 conn.close()
-
-input("Press Enter to exit...")

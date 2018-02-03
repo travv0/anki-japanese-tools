@@ -108,5 +108,3 @@ if errors:
 
     for error in errors:
         print("%s - %s" % (error[0], error[1]))
-
-input("Press Enter to exit...")

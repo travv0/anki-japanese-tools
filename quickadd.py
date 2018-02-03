@@ -24,5 +24,3 @@ for word in wordList:
         shared.saveAnki()
 
 shared.saveAndCloseAnki()
-
-input("Press Enter to exit...")
