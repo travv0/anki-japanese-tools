@@ -1,6 +1,6 @@
 import sqlite3, sys, os, requests, configparser, codecs
 
-configPath =  sys.argv[1] if len(sys.argv) > 1 else '../config.ini'
+configPath =  sys.argv[1] if len(sys.argv) > 1 else 'config.ini'
 
 config = configparser.ConfigParser()
 
@@ -16,7 +16,7 @@ if not config.sections():
     exit()
 
 dbPath = os.path.expanduser(config['SETTINGS']['dbPath'])
-wordsFile = '../words.txt'
+wordsFile = 'words.txt'
 
 try:
     conn = sqlite3.connect(os.path.expanduser(dbPath))
@@ -33,7 +33,7 @@ from words
 join lookups on words.id = lookups.word_key;
 ''')
 
-file = codecs.open(configPath, "a", "utf8")
+file = codecs.open(wordsFile, "a", "utf8")
 for row in c.fetchall():
-	file.write(row['word'] + '\t\t' + row['usage'])
+	file.write(row['word'] + '\t\t' + row['usage'] + '\n')
 file.close()

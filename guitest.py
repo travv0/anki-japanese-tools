@@ -47,6 +47,7 @@ cpath = os.path.join(PROFILE_HOME, collectionName + ".anki2")
 # end anki initialization
 
 app = gui()
+app.setSize(600, 400)
 
 def getWordsFromFile(file):
     file = codecs.open(file, 'r', 'utf8')
@@ -63,7 +64,9 @@ def getWordsFromFile(file):
 
 def vocabPane(words):
     linenum = 0
-    with app.scrollPane("vocabList"):
+    with app.scrollPane("vocabList", 0, 0, 3):
+        app.setSticky('nesw')
+
         for fword, data in words.items():
             word = JishoWord(fword)
 
@@ -82,8 +85,9 @@ def vocabPane(words):
 
                 linenum += 1
 
-def removeVocabWidgets():
+def resetApp():
     app.removeAllWidgets()
+    drawApp(app)
 
 def submit(btn):
     wd = os.getcwd()
@@ -154,19 +158,39 @@ def submit(btn):
         file.write("")
         file.close()
 
-        removeVocabWidgets()
-        drawApp(app)
+        resetApp()
 
     except sqlite3.OperationalError as e:
         print("Unable to connect to Anki database.  Please ensure Anki is not open and try again.\nError: %s" % e)
 
+def runScript(file):
+    os.system(sys.executable + ' import/' + file)
+    resetApp()
+
+def quickAdd(btn):
+    file = codecs.open(wordsFile, 'a', 'utf8')
+    file.write(app.getEntry("quickAddEntry") + '\n')
+    file.close()
+
+    resetApp()
+
+files = os.listdir('import/')
+
+app.addMenuList("File", ["Exit"], app.stop)
+app.addMenuList("Import", files, runScript)
+
 def drawApp(app):
+
     words = getWordsFromFile(wordsFile)
-    print(words)
 
     vocabPane(words)
 
-    app.addButton("Import into Anki and clear list", submit)
+    app.addEntry("quickAddEntry", 1, 0, 2)
+    app.addButton("Quick Add", quickAdd, 1, 2)
+
+    app.setEntrySubmitFunction("quickAddEntry", quickAdd)
+
+    app.addButton("Import into Anki and clear list", submit, 2, 1)
 
     app.go()
 
