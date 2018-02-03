@@ -1,3 +1,5 @@
 requests
 configparser
 mutagen
+lxml
+chardet
