@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import sqlite3, sys, os, requests, configparser, codecs, chardet
+import sqlite3, sys, os, requests, configparser, codecs, chardet, shared
 from shutil import copyfile
 from mutagen.mp3 import MP3
 
@@ -75,87 +75,10 @@ else:
 wordList = words.replace('　', ' ').replace('\r\n', ' ').replace('\n', ' ').split(' ')
 
 i = 0
-numOfWords = len(wordList)
 
 for word in wordList:
-    expression = word
+    shared.addToAnki(col, deck, word, '')
 
-    found = False
-    kanaOnly = False
-
-    if not col.findNotes('"%s:%s"' % (expressionFieldName, expression)):
-
-        r = requests.get("http://jisho.org/api/v1/search/words?",
-                         params = {'keyword': '"' + expression + '"'})
-        json = r.json()
-
-        if json['data']:
-
-            entry = json['data'][0]
-
-            for e in entry['japanese']:
-                for k, v in e.items():
-                    if v == expression:
-                        found = True
-
-                        if k == 'reading':
-                            kanaOnly = True
-
-                        break
-                if found:
-                    break
-
-            if found:
-
-                note = col.newNote()
-                note.model()['did'] = deck['id']
-
-                english = '<br/>'.join(list(map((lambda x: '; '.join(x['english_definitions'])),
-                                                entry['senses'])))
-
-                if 'reading' not in entry['japanese'][0] or (kanaOnly and len(expression) == 1):
-                    continue
-
-                if kanaOnly:
-                    reading = ''
-                else:
-                    reading = entry['japanese'][0]['reading']
-
-                sentence = ''
-
-                audio = requests.get("https://assets.languagepod101.com/dictionary/japanese/audiomp3.php?",
-                                     params = {'kanji': expression,
-                                               'kana': reading if reading else expression})
-
-                audioFileName = 'k2a_%s_%s.mp3' % (expression, reading if reading else expression)
-                audioFilePath = '%s/%s.media/%s' % (PROFILE_HOME, collectionName, audioFileName)
-                with open(audioFilePath, 'wb') as f:
-                    f.write(audio.content)
-
-                mp3 = MP3(audioFilePath)
-
-                note.fields[expressionIndex] = expression
-                note.fields[readingIndex] = reading
-                note.fields[englishIndex] = english
-                note.fields[sentenceIndex] = sentence
-                if mp3.info.length < 5:
-                    note.fields[audioIndex] = '[sound:' + audioFileName + ']'
-                else:
-                    os.remove(audioFilePath)
-
-                tags = 'k2a lastimport'
-                note.tags = col.tags.canonify(col.tags.split(tags))
-                m = note.model()
-                m['tags'] = note.tags
-                col.models.save(m)
-
-                col.addNote(note)
-
-                print("%d/%d\tAdded %s " % (i, numOfWords, expression), end='')
-                if reading:
-                    print("(%s) " % reading, end='')
-                print("to Anki: %s" %
-                      ((english[:50] + '...') if len(english) > 53 else english).replace('<br/>', '; '))
     if (i % 50 == 0):
         print('\nSaving collection...\n')
         col.save()

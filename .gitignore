@@ -2,3 +2,4 @@ venv
 vocab.db
 __pycache__/*
 tags
+words.txt
