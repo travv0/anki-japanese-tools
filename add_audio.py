@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import sys, os, requests, configparser, codecs
+import sys, os, requests, configparser, codecs, sqlite3
 from shutil import copyfile
 from mutagen.mp3 import MP3
 

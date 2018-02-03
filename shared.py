@@ -1,9 +1,8 @@
-import sqlite3, sys, os, requests, configparser, codecs, chardet
+import sqlite3, sys, os, requests, configparser, codecs
 from shutil import copyfile
 from mutagen.mp3 import MP3
 
-configPath = 'config.ini'
-wordsPath = sys.argv[1] if len(sys.argv) > 1 else None
+configPath = sys.argv[1] if len(sys.argv) > 1 else 'config.ini'
 
 config = configparser.ConfigParser()
 
@@ -25,7 +24,25 @@ cardTypeName = config['SETTINGS']['cardTypeName']
 deckName = config['SETTINGS']['deckName']
 expressionFieldName = config['SETTINGS']['expressionFieldName']
 
+# set up anki
+sys.path.append("anki")
+from anki.storage import Collection
+
+wd = os.getcwd()
+
 PROFILE_HOME = os.path.expanduser(profilePath)
+cpath = os.path.join(PROFILE_HOME, collectionName + ".anki2")
+
+try:
+    col = Collection(cpath, log=True)
+except sqlite3.OperationalError as e:
+    print("Unable to connect to Anki database.  Please ensure Anki is not open and try again.\nError: %s" % e)
+    exit()
+
+model = col.models.byName(cardTypeName)
+col.decks.current()['mid'] = model['id']
+
+deck = col.decks.byName(deckName)
 
 try:
     expressionIndex = int(config['NOTE_FIELD_INDICES']['expression'])
@@ -37,7 +54,7 @@ except ValueError as e:
     print("Note field indices must be integers.\nError: %s" % e)
     exit()
 
-def addToAnki(col, deck, expression, sentence):
+def addToAnki(expression, sentence):
     found = False
     kanaOnly = False
 
@@ -113,3 +130,17 @@ def addToAnki(col, deck, expression, sentence):
                         print("(%s) " % reading, end='')
                     print("to Anki: %s" %
                           ((english[:50] + '...') if len(english) > 53 else english).replace('<br/>', '; '))
+
+def saveAndCloseAnki():
+    print("Finished adding cards, saving collection...")
+    col.close(save=True)
+
+def resetLastImportTag():
+    for noteid in col.findNotes('tag:k2a tag:lastimport'):
+        note = col.getNote(noteid)
+        note.delTag('lastimport')
+        note.flush()
+
+def saveAnki():
+    print('\nSaving collection...\n')
+    col.save()
