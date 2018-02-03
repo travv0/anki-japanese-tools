@@ -1,4 +1,5 @@
 import sqlite3, sys, os, requests, configparser, codecs
+from shutil import copyfile
 
 configPath =  sys.argv[1] if len(sys.argv) > 1 else 'config.ini'
 
@@ -37,3 +38,25 @@ file = codecs.open(wordsFile, "a", "utf8")
 for row in c.fetchall():
 	file.write(row['word'] + '\t\t' + row['usage'] + '\n')
 file.close()
+
+if os.path.isfile(dbPath + '.bak'):
+    os.remove(dbPath + '.bak')
+
+print("Backing up Kindle vocabulary database...")
+copyfile(dbPath, dbPath + '.bak')
+
+if os.path.isfile(dbPath + '.bak'):
+
+    print("Removing words from Kindle vocabulary database...")
+    c.execute('delete from words;')
+    c.execute('delete from lookups;')
+
+    conn.commit()
+    print("Complete.  Please restart your Kindle to ensure database doesn't become corrupt.")
+
+else:
+
+    print("Unable to backup database, skipping Kindle flashcard deletion.")
+    print("Complete.")
+
+conn.close()
