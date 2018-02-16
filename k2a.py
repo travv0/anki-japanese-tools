@@ -12,7 +12,7 @@ try:
     conn = sqlite3.connect(os.path.expanduser(shared.dbPath))
 except sqlite3.OperationalError as e:
     print("Unable to connect to Kindle database.  Please ensure your Kindle is plugged in and in USB mode.\nError: %s" % e)
-    exit()
+    exit(kindleDbErr)
 
 conn.row_factory = sqlite3.Row
 
@@ -28,6 +28,7 @@ shared.resetLastImportTag()
 for row in c.fetchall():
     shared.addToAnki(row['word'], row['usage'])
 
+print("Finished adding cards, saving collection...")
 shared.saveAndCloseAnki()
 
 if os.path.isfile(shared.dbPath + '.bak'):

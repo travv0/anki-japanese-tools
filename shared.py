@@ -2,6 +2,14 @@ import sqlite3, sys, os, requests, configparser, codecs
 from shutil import copyfile
 from mutagen.mp3 import MP3
 
+errors = []
+
+# error codes
+configPathErr = 1
+ankiDbErr = 2
+indexErr = 3
+kindleDbErr = 4
+
 configPath = sys.argv[1] if len(sys.argv) > 1 else 'config.ini'
 
 config = configparser.ConfigParser()
@@ -11,11 +19,11 @@ try:
 except FileNotFoundError as e:
     print('''Error loading config file "%s".  You can specify the path as the first command line argument.
 Error: %s''' % (configPath, e))
-    exit()
+    exit(configPathErr)
 
 if not config.sections():
     print('Error loading config file "%s".  You can specify the path as the first command line argument.' % configPath)
-    exit()
+    exit(configPathErr)
 
 dbPath = os.path.expanduser(config['SETTINGS']['dbPath'])
 profilePath = config['SETTINGS']['profilePath']
@@ -23,6 +31,7 @@ collectionName = config['SETTINGS']['collectionName']
 cardTypeName = config['SETTINGS']['cardTypeName']
 deckName = config['SETTINGS']['deckName']
 expressionFieldName = config['SETTINGS']['expressionFieldName']
+audioFieldName = config['SETTINGS']['audioFieldName']
 
 # set up anki
 sys.path.append("anki")
@@ -37,7 +46,7 @@ try:
     col = Collection(cpath, log=True)
 except sqlite3.OperationalError as e:
     print("Unable to connect to Anki database.  Please ensure Anki is not open and try again.\nError: %s" % e)
-    exit()
+    exit(ankiDbErr)
 
 model = col.models.byName(cardTypeName)
 col.decks.current()['mid'] = model['id']
@@ -52,7 +61,7 @@ try:
     audioIndex = int(config['NOTE_FIELD_INDICES']['audio'])
 except ValueError as e:
     print("Note field indices must be integers.\nError: %s" % e)
-    exit()
+    exit(indexErr)
 
 def addToAnki(expression, sentence):
     found = False
@@ -131,8 +140,53 @@ def addToAnki(expression, sentence):
                     print("to Anki: %s" %
                           ((english[:50] + '...') if len(english) > 53 else english).replace('<br/>', '; '))
 
+def addAudio():
+    save_interval = 50
+
+    i = 0
+
+    notes = col.findNotes('"deck:%s" -tag:noaudio %s:' % (deckName, audioFieldName))
+    notecnt = len(notes)
+
+    print("Attempting to add audio for %d cards..." % notecnt)
+
+    for noteid in notes:
+        note = col.getNote(noteid)
+
+        i += 1
+        expression = note.fields[expressionIndex]
+        reading = note.fields[readingIndex]
+
+        audio = requests.get("https://assets.languagepod101.com/dictionary/japanese/audiomp3.php?",
+                             params = {'kanji': expression,
+                                       'kana': reading if reading else expression})
+
+        audioFileName = 'k2a_%s_%s.mp3' % (expression, reading if reading else expression)
+        audioFilePath = '%s/%s.media/%s' % (PROFILE_HOME, collectionName, audioFileName)
+        try:
+            with open(audioFilePath, 'wb') as f:
+                f.write(audio.content)
+        except OSError as e:
+            errors.append((expression, e))
+
+        mp3 = MP3(audioFilePath)
+
+        if mp3.info.length < 5:
+            note.fields[audioIndex] = '[sound:' + audioFileName + ']'
+
+            print('%d/%d\tAdding audio "%s" for %s' % (i, notecnt, audioFileName, expression))
+        else:
+            print('%d/%d\tAudio not found for %s, skipping...' % (i, notecnt, expression))
+            note.addTag('noaudio')
+            os.remove(audioFilePath)
+
+        note.flush()
+
+        if i % save_interval == 0:
+            col.save()
+            print("\nCollection saved\n")
+
 def saveAndCloseAnki():
-    print("Finished adding cards, saving collection...")
     col.close(save=True)
 
 def resetLastImportTag():
@@ -144,3 +198,10 @@ def resetLastImportTag():
 def saveAnki():
     print('\nSaving collection...\n')
     col.save()
+
+def printErrors():
+    if errors:
+        print("The following errors occurred:")
+
+        for error in errors:
+            print("%s - %s" % (error[0], error[1]))

@@ -23,4 +23,5 @@ for word in wordList:
     if (i % 50 == 0):
         shared.saveAnki()
 
+print("Finished adding cards, saving collection...")
 shared.saveAndCloseAnki()
