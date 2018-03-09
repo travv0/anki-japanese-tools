@@ -104,8 +104,6 @@ def addToAnki(expression, sentence):
                     else:
                         reading = entry['japanese'][0]['reading']
 
-                    sentence = ''
-
                     audio = requests.get("https://assets.languagepod101.com/dictionary/japanese/audiomp3.php?",
                                          params = {'kanji': expression,
                                                    'kana': reading if reading else expression})
